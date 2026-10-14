@@ -1,4 +1,4 @@
-name: Compiler le test Vita
+name: Compiler les tests Vita
 
 on:
   push:
@@ -16,8 +16,10 @@ jobs:
           cd build
           cmake ..
           make
-      - name: Garder le .vpk
+      - name: Garder les .vpk
         uses: actions/upload-artifact@v4
         with:
-          name: perf-test-vita
-          path: build/heist_perf_test.vpk
+          name: tests-vita
+          path: |
+            build/heist_perf_test.vpk
+            build/heist_cpu_test.vpk

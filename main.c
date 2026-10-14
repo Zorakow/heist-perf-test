@@ -13,12 +13,13 @@
 #define SW 960
 #define SH 544
 #define NTEX 6
-#define TEXSZ 512
+#define NLV 4
+static const int LV_SZ[NLV] = {512, 256, 128, 64};
 #define MAXSPR 512
 
-typedef struct { float x, y, s, rot, par; int t; } Spr;
+typedef struct { float x, y, s, rot, par; int t, lv; } Spr;
 
-static vita2d_texture *tex[NTEX];
+static vita2d_texture *tex[NLV][NTEX];
 static vita2d_texture *lighttex;          /* degrade radial d'une lumiere */
 static vita2d_texture *lm[2];             /* lightmaps 240x136 et 480x272 */
 static const int LM_W[2] = {240, 480};
@@ -30,7 +31,7 @@ static const float OD_LEVELS[] = {1, 2, 3, 4, 6, 8, 12};
 #define N_OD 7
 static const int SPR_COUNTS[] = {64, 256};
 
-static vita2d_texture *make_tex(int seed)
+static vita2d_texture *make_tex(int seed, int TEXSZ)
 {
     vita2d_texture *t = vita2d_create_empty_texture_format(TEXSZ, TEXSZ, SCE_GXM_TEXTURE_FORMAT_A8B8G8R8);
     unsigned int *p = (unsigned int *)vita2d_texture_get_datap(t);
@@ -93,9 +94,14 @@ static void build_scene(int count, float overdraw)
 {
     srand(1234);
     float area = overdraw * SW * SH / count;     /* surface moyenne d'un sprite */
-    float s = sqrtf(area) / TEXSZ;                /* echelle d'un sprite carre */
+    float px = sqrtf(area);                       /* cote moyen en pixels ecran */
+    /* on choisit la plus petite texture >= au sprite, pour rester proche de 1:1
+       (sans mipmaps, reduire une grande texture ruine le cache et fausse le test) */
+    int lv = 0;
+    for (int l = NLV - 1; l >= 0; l--) if (LV_SZ[l] >= px) { lv = l; break; }
     for (int i = 0; i < count; i++) {
-        spr[i].s = s * (0.6f + 1.0f * (rand() % 100) / 100.0f);
+        spr[i].lv = lv;
+        spr[i].s = px / LV_SZ[lv] * (0.6f + 1.0f * (rand() % 100) / 100.0f);
         spr[i].x = (float)(rand() % SW);
         spr[i].y = (float)(rand() % SH);
         spr[i].rot = ((rand() % 100) / 100.0f - 0.5f) * 0.6f;
@@ -109,7 +115,7 @@ int main(void)
     vita2d_init();
     vita2d_set_clear_color(RGBA8(18, 22, 30, 255));
     vita2d_pgf *pgf = vita2d_load_default_pgf();
-    for (int i = 0; i < NTEX; i++) tex[i] = make_tex(i);
+    for (int l = 0; l < NLV; l++) for (int i = 0; i < NTEX; i++) tex[l][i] = make_tex(i, LV_SZ[l]);
     lighttex = make_light();
     for (int i = 0; i < 2; i++) {
         lm[i] = vita2d_create_empty_texture_rendertarget(LM_W[i], LM_H[i], SCE_GXM_TEXTURE_FORMAT_A8B8G8R8);
@@ -120,7 +126,7 @@ int main(void)
     SceCtrlData pad, old;
     memset(&old, 0, sizeof(old));
 
-    int od = 1, sc = 0, passes = 0, vsync = 0, mhz = 333, lmode = 0, nl = 1;
+    int od = 1, sc = 0, passes = 0, vsync = 0, mhz = 333, lmode = 0, nl = 1, hud = 1;
     int logged = 0;
     scePowerSetArmClockFrequency(333);
     scePowerSetGpuClockFrequency(222);
@@ -143,6 +149,7 @@ int main(void)
         if (pr & SCE_CTRL_LEFT)  { if (passes > 0) passes--; }
         if (pr & SCE_CTRL_CROSS) { sc = 1 - sc; dirty = 1; }
         if (pr & SCE_CTRL_SELECT){ lmode = (lmode + 1) % 3; }
+        if (pr & SCE_CTRL_LTRIGGER){ hud = !hud; }
         if (pr & SCE_CTRL_RTRIGGER){ nl = (nl + 1) % 3; }
         if (pr & SCE_CTRL_SQUARE){ vsync = !vsync; vita2d_set_vblank_wait(vsync); }
         if (pr & SCE_CTRL_TRIANGLE) {
@@ -150,16 +157,20 @@ int main(void)
             scePowerSetArmClockFrequency(mhz);
             scePowerSetGpuClockFrequency(mhz == 444 ? 222 : 222);
         }
-        if (pr & SCE_CTRL_CIRCLE) {
+        if ((pr & SCE_CTRL_CIRCLE) && fps > 0) {
             FILE *f = fopen("ux0:data/heist_perf_test.txt", "a");
             if (f) {
-                fprintf(f, "overdraw=%.0f sprites=%d lumiere=%d lightmap=%d lumieres=%d cpu=%dMHz vsync=%d -> %.1f fps (%.2f ms)\n",
-                        OD_LEVELS[od], SPR_COUNTS[sc], passes, LM_NAMES[lmode], LIGHT_COUNTS[nl], mhz, vsync, fps, ms);
+                fprintf(f, "overdraw=%.0f sprites=%d lumiere=%d lightmap=%d lumieres=%d hud=%d cpu=%dMHz vsync=%d -> %.1f fps (%.2f ms)\n",
+                        OD_LEVELS[od], SPR_COUNTS[sc], passes, LM_NAMES[lmode], LIGHT_COUNTS[nl], hud, mhz, vsync, fps, ms);
                 fclose(f);
                 logged++;
             }
         }
         if (pr & SCE_CTRL_START) break;
+        if (pr & (SCE_CTRL_UP | SCE_CTRL_DOWN | SCE_CTRL_LEFT | SCE_CTRL_RIGHT | SCE_CTRL_CROSS |
+                  SCE_CTRL_SELECT | SCE_CTRL_RTRIGGER | SCE_CTRL_TRIANGLE | SCE_CTRL_SQUARE)) {
+            fps = 0; ms = 0; frames = 0; tlast = sceKernelGetProcessTimeWide();  /* mesure repart a zero */
+        }
         if (dirty) build_scene(SPR_COUNTS[sc], OD_LEVELS[od]);
 
         unsigned long long ts = sceKernelGetProcessTimeWide();
@@ -168,7 +179,7 @@ int main(void)
         vita2d_clear_screen();
         float cam = sinf(frame * 0.01f) * 120.0f;
         for (int i = 0; i < SPR_COUNTS[sc]; i++) {
-            vita2d_draw_texture_scale_rotate(tex[spr[i].t], spr[i].x + cam * spr[i].par, spr[i].y,
+            vita2d_draw_texture_scale_rotate(tex[spr[i].lv][spr[i].t], spr[i].x + cam * spr[i].par, spr[i].y,
                                              spr[i].s, spr[i].s, spr[i].rot);
         }
         if (lmode) {
@@ -179,12 +190,14 @@ int main(void)
         }
         for (int k = 0; k < passes; k++)
             vita2d_draw_rectangle(0, 0, SW, SH, RGBA8(255, 200, 150, 40));
+        if (hud) {
         vita2d_pgf_draw_textf(pgf, 10, 22, RGBA8(255, 255, 255, 255), 1.0f,
                               "Remplissage x%.0f | sprites %d | plein ecran %d | lightmap %d (%d lum.) | CPU %d | vsync %s",
                               OD_LEVELS[od], SPR_COUNTS[sc], passes, LM_NAMES[lmode], LIGHT_COUNTS[nl], mhz, vsync ? "ON" : "OFF");
-        vita2d_pgf_draw_textf(pgf, 10, 46, RGBA8(255, 255, 0, 255), 1.2f, "%.1f fps  (%.2f ms/image)", fps, ms);
+        vita2d_pgf_draw_textf(pgf, 10, 46, RGBA8(255, 255, 0, 255), 1.2f, "%.1f fps  (%.2f ms/image)  [v3]", fps, ms);
         vita2d_pgf_draw_text(pgf, 10, 520, RGBA8(200, 200, 200, 255), 0.9f,
-                             "Haut/Bas: remplissage  Gauche/Droite: plein ecran  Select: lightmap  R: nb lumieres  Croix: nb sprites  Carre: vsync  Triangle: 333/444 MHz  Rond: noter  Start: quitter");
+                             "Haut/Bas: remplissage  Gauche/Droite: plein ecran  Select: lightmap  R: nb lumieres  L: cacher le texte  Croix: nb sprites  Carre: vsync  Triangle: 333/444 MHz  Rond: noter  Start: quitter");
+        }
         vita2d_end_drawing();
         vita2d_wait_rendering_done();
         vita2d_swap_buffers();
@@ -201,7 +214,7 @@ int main(void)
         (void)ts; (void)t0;
     }
 
-    for (int i = 0; i < NTEX; i++) vita2d_free_texture(tex[i]);
+    for (int l = 0; l < NLV; l++) for (int i = 0; i < NTEX; i++) vita2d_free_texture(tex[l][i]);
     vita2d_free_texture(lighttex);
     for (int i = 0; i < 2; i++) vita2d_free_texture(lm[i]);
     vita2d_free_pgf(pgf);

@@ -22,7 +22,7 @@ add_executable(${PROJECT_NAME} main.c)
 target_link_libraries(${PROJECT_NAME}
   vita2d
   SceDisplay_stub SceGxm_stub SceSysmodule_stub SceCtrl_stub
-  ScePgf_stub ScePvf_stub SceCommonDialog_stub ScePower_stub
+  ScePgf_stub ScePvf_stub SceCommonDialog_stub ScePower_stub SceAppMgr_stub
   freetype png jpeg z m c
 )
 

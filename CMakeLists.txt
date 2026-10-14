@@ -8,11 +8,11 @@ if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
   endif()
 endif()
 
-project(heist_perf_test C)
+project(heist_cpu_test C)
 include("$ENV{VITASDK}/share/vita.cmake" REQUIRED)
 
-set(VITA_APP_NAME "Perf Test 2D")
-set(VITA_TITLEID  "HSTPERF01")
+set(VITA_APP_NAME "Test CPU")
+set(VITA_TITLEID  "HSTCPU001")
 set(VITA_VERSION  "01.00")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wl,-q -O2 -std=gnu99")

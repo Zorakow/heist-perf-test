@@ -1,0 +1,23 @@
+name: Compiler le test Vita
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: vitasdk/vitasdk:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compiler
+        run: |
+          mkdir build
+          cd build
+          cmake ..
+          make
+      - name: Garder le .vpk
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-test-vita
+          path: build/heist_perf_test.vpk

@@ -46,3 +46,21 @@ vita_create_vpk(heist_chars_test.vpk HSTCHR001 heist_chars_test.self
   VERSION 01.00
   NAME "Test Personnages"
 )
+
+# Test avec le vrai Fabio (donnees dans ux0:data/heist/)
+add_executable(heist_fabio_test fab_main.c)
+target_link_libraries(heist_fabio_test ${LIBS})
+vita_create_self(heist_fabio_test.self heist_fabio_test)
+vita_create_vpk(heist_fabio_test.vpk HSTFAB001 heist_fabio_test.self
+  VERSION 01.00
+  NAME "Test Fabio"
+)
+
+# Test multi-personnages (8 vrais persos, texture partagee)
+add_executable(heist_multi_test multi_main.c)
+target_link_libraries(heist_multi_test ${LIBS})
+vita_create_self(heist_multi_test.self heist_multi_test)
+vita_create_vpk(heist_multi_test.vpk HSTMUL001 heist_multi_test.self
+  VERSION 01.00
+  NAME "Test Multi Persos"
+)

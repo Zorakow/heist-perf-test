@@ -37,3 +37,12 @@ vita_create_vpk(heist_cpu_test.vpk HSTCPU001 heist_cpu_test.self
   VERSION 01.00
   NAME "Test CPU"
 )
+
+# Test personnages (squelettes, deformation, envoi groupe)
+add_executable(heist_chars_test chars_main.c)
+target_link_libraries(heist_chars_test ${LIBS})
+vita_create_self(heist_chars_test.self heist_chars_test)
+vita_create_vpk(heist_chars_test.vpk HSTCHR001 heist_chars_test.self
+  VERSION 01.00
+  NAME "Test Personnages"
+)

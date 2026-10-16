@@ -24,3 +24,5 @@ jobs:
             build/heist_perf_test.vpk
             build/heist_cpu_test.vpk
             build/heist_chars_test.vpk
+            build/heist_fabio_test.vpk
+            build/heist_multi_test.vpk

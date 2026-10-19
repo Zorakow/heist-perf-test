@@ -64,3 +64,12 @@ vita_create_vpk(heist_multi_test.vpk HSTMUL001 heist_multi_test.self
   VERSION 01.00
   NAME "Test Multi Persos"
 )
+
+# Test niveau reel (tutorial) + personnages
+add_executable(heist_level_test level_main.c)
+target_link_libraries(heist_level_test ${LIBS})
+vita_create_self(heist_level_test.self heist_level_test)
+vita_create_vpk(heist_level_test.vpk HSTLVL001 heist_level_test.self
+  VERSION 01.00
+  NAME "Test Niveau"
+)

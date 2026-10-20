@@ -27,3 +27,4 @@ jobs:
             build/heist_fabio_test.vpk
             build/heist_multi_test.vpk
             build/heist_level_test.vpk
+            build/heist_play_test.vpk

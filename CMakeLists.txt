@@ -73,3 +73,12 @@ vita_create_vpk(heist_level_test.vpk HSTLVL001 heist_level_test.self
   VERSION 01.00
   NAME "Test Niveau"
 )
+
+# Prototype jouable : Daisy dans le niveau tutorial (collisions, ennemis aux vraies positions)
+add_executable(heist_play_test play_main.c)
+target_link_libraries(heist_play_test ${LIBS})
+vita_create_self(heist_play_test.self heist_play_test)
+vita_create_vpk(heist_play_test.vpk HSTPLY001 heist_play_test.self
+  VERSION 01.00
+  NAME "Heist 2 Jouable"
+)
